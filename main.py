@@ -9,16 +9,24 @@ from threading import Thread
 ROBX_COOKIE = os.getenv("Roblox_COOKIE")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
+ultimul_log = None  # Folosit pentru a evita spamul
+
+
 def log(mesaj):
-    print(mesaj)
-    try:
-        requests.post(DISCORD_WEBHOOK_URL, json={"content": mesaj})
-    except:
-        pass
+    global ultimul_log
+    if mesaj != ultimul_log:
+        print(mesaj)
+        try:
+            requests.post(DISCORD_WEBHOOK_URL, json={"content": mesaj})
+        except:
+            pass
+        ultimul_log = mesaj
+
 
 def ia_csrf_token(ses):
     res = ses.post("https://auth.roblox.com/v2/logout")
     return res.headers.get("x-csrf-token", "")
+
 
 def cumpara_item(ses, csrf_token, product_id):
     headers = {"x-csrf-token": csrf_token}
@@ -26,15 +34,19 @@ def cumpara_item(ses, csrf_token, product_id):
     return ses.post(f"https://economy.roblox.com/v1/purchases/products/{product_id}",
                     json=payload, headers=headers)
 
+
 # === SERVER PENTRU PING ===
 app = Flask('')
+
 
 @app.route('/')
 def home():
     return "🔥 Clitchicistul sniper bot is ALIVE!"
 
+
 def run():
     app.run(host='0.0.0.0', port=8080)
+
 
 Thread(target=run).start()
 
@@ -55,6 +67,7 @@ while True:
         else:
             log("[FAIL] Nu am luat tokenul.")
 
+        # === PORNIRE SNIPER ===
         log("[INFO] Încep căutarea de iteme gratuite...")
         log("[INFO] Pornesc sniper-ul UGC...")
         log("[🔄] Sniper-ul a fost pornit și funcționează.")
@@ -65,12 +78,12 @@ while True:
                 print("[LOOP] Sniper activ... verific iteme gratuite.")
                 res = ses.get("https://catalog.roblox.com/v1/search/items?Category=11&SortType=3&Limit=30")
 
-                if res.status_code == 200 and res.text.strip():
-                    data = res.json()
-                else:
-                    log(f"[EROARE LOOP] Răspuns gol sau invalid. Status: {res.status_code}")
-                    time.sleep(2)
+                if res.status_code == 429:
+                    log("[EROARE LOOP] Status 429 - prea multe cereri. Pauză 60s...")
+                    time.sleep(60)
                     continue
+
+                data = res.json()
 
                 for item in data.get("data", []):
                     idul = item.get("id")
