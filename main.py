@@ -55,7 +55,6 @@ while True:
         else:
             log("[FAIL] Nu am luat tokenul.")
 
-        # === PORNIRE SNIPER ===
         log("[INFO] Încep căutarea de iteme gratuite...")
         log("[INFO] Pornesc sniper-ul UGC...")
         log("[🔄] Sniper-ul a fost pornit și funcționează.")
@@ -65,7 +64,13 @@ while True:
             try:
                 print("[LOOP] Sniper activ... verific iteme gratuite.")
                 res = ses.get("https://catalog.roblox.com/v1/search/items?Category=11&SortType=3&Limit=30")
-                data = res.json()
+
+                if res.status_code == 200 and res.text.strip():
+                    data = res.json()
+                else:
+                    log(f"[EROARE LOOP] Răspuns gol sau invalid. Status: {res.status_code}")
+                    time.sleep(2)
+                    continue
 
                 for item in data.get("data", []):
                     idul = item.get("id")
